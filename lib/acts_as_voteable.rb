@@ -9,7 +9,7 @@ module Juixe
 
       module ClassMethods
         def acts_as_voteable
-          has_many :votes, :as => :voteable, :dependent => :nullify
+          has_many :votes, :as => :voteable, :dependent => :destroy
 
           include Juixe::Acts::Voteable::InstanceMethods
           extend  Juixe::Acts::Voteable::SingletonMethods
@@ -70,6 +70,13 @@ module Juixe
       
       # This module contains instance methods
       module InstanceMethods
+        def votes_by(voter_class)
+          Vote.count(:all, :conditions => [
+            "voteable_id = ? AND voteable_type = ? AND voter_type = ?",
+            id, self.class.name, voter_class
+          ])
+        end
+        
         def votes_for
           Vote.count(:all, :conditions => [
             "voteable_id = ? AND voteable_type = ? AND vote = ?",
@@ -77,10 +84,38 @@ module Juixe
           ])
         end
         
+        def votes_for_by(voter_class)
+          Vote.count(:all, :conditions => [
+            "voteable_id = ? AND voteable_type = ? AND voter_type = ? AND vote = ?",
+            id, self.class.name, voter_class, true
+          ])
+        end
+        
         def votes_against
           Vote.count(:all, :conditions => [
             "voteable_id = ? AND voteable_type = ? AND vote = ?",
             id, self.class.name, false
+          ])
+        end
+        
+        def votes_against_by(voter_class)
+          Vote.count(:all, :conditions => [
+            "voteable_id = ? AND voteable_type = ? AND voter_type = ? AND vote = ?",
+            id, self.class.name, voter_class, false
+          ])
+        end
+        
+        def votes_neutral
+          Vote.count(:all, :conditions => [
+            "voteable_id = ? AND voteable_type = ? AND vote IS NULL",
+            id, self.class.name
+          ])
+        end
+        
+        def votes_neutral_by(voter_class)
+          Vote.count(:all, :conditions => [
+            "voteable_id = ? AND voteable_type = ? AND voter_type = ? AND vote IS NULL",
+            id, self.class.name, voter_class
           ])
         end
         
@@ -102,6 +137,16 @@ module Juixe
           if voter
             self.votes.each { |v|
               rtn = true if (voter.id == v.voter_id && voter.class.name == v.voter_type)
+            }
+          end
+          rtn
+        end
+        
+        def voted_result_by?(voter, vote)
+          rtn = false
+          if voter
+            self.votes.each { |v|
+              rtn = true if (voter.id == v.voter_id && voter.class.name == v.voter_type && vote == v.vote)
             }
           end
           rtn

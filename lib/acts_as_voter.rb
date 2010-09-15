@@ -9,7 +9,7 @@ module PeteOnRails
 
       module ClassMethods
         def acts_as_voter
-          has_many :votes, :as => :voter, :dependent => :nullify  # If a voting entity is deleted, keep the votes. 
+          has_many :votes, :as => :voter, :dependent => :destroy  # If a voting entity is deleted, keep the votes. 
           include PeteOnRails::Acts::Voter::InstanceMethods
           extend  PeteOnRails::Acts::Voter::SingletonMethods
         end
@@ -34,6 +34,19 @@ module PeteOnRails
           Vote.count(:all, :conditions => where)
 
         end
+        
+        def vote_choice(voteable)
+          vote = Vote.find(:first, :conditions => [
+                      "voter_id = ? AND voter_type = ? AND voteable_id = ? AND voteable_type = ?",
+                      self.id, self.class.name, voteable.id, voteable.class.name])
+          vote ? vote.vote : nil
+        end
+        
+        def vote_object(voteable)
+          vote = Vote.find(:first, :conditions => [
+                      "voter_id = ? AND voter_type = ? AND voteable_id = ? AND voteable_type = ?",
+                      self.id, self.class.name, voteable.id, voteable.class.name])
+        end
                 
         def voted_for?(voteable)
            0 < Vote.count(:all, :conditions => [
@@ -46,6 +59,13 @@ module PeteOnRails
            0 < Vote.count(:all, :conditions => [
                    "voter_id = ? AND voter_type = ? AND vote = ? AND voteable_id = ? AND voteable_type = ?",
                    self.id, self.class.name, false, voteable.id, voteable.class.name
+                   ])
+         end
+         
+         def voted_neutral?(voteable)
+           0 < Vote.count(:all, :conditions => [
+                   "voter_id = ? AND voter_type = ? AND vote IS NULL AND voteable_id = ? AND voteable_type = ?",
+                   self.id, self.class.name, voteable.id, voteable.class.name
                    ])
          end
 
@@ -62,6 +82,10 @@ module PeteOnRails
         
         def vote_against(voteable)
           self.vote(voteable, false)
+        end
+        
+        def vote_neutral(voteable)
+          self.vote(voteable, nil)
         end
 
         def vote(voteable, vote)
