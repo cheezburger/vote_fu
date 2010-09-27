@@ -88,9 +88,15 @@ module PeteOnRails
           self.vote(voteable, nil)
         end
 
+        def vote!(voteable, vote)
+          vote = Vote.new(:vote => vote, :voteable => voteable, :voter => self)
+          vote.save
+        end
+        
         def vote(voteable, vote)
           vote = Vote.new(:vote => vote, :voteable => voteable, :voter => self)
           vote.save
+          return vote
         end
 
       end
